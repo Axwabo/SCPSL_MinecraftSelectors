@@ -1,0 +1,23 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using Exiled.API.Features;
+using HarmonyLib;
+using Utils;
+
+namespace MinecraftSelectors {
+    [HarmonyPatch(typeof(RAUtils), nameof(RAUtils.ProcessPlayerIdOrNamesList))]
+    internal static class ProcessPatch {
+        private static bool Enable => MinecraftSelectorsPlugin.IsPluginEnabled &&
+                                      MinecraftSelectorsPlugin.Singleton.Config.EnableSelectors;
+
+        private static bool Prefix(ArraySegment<string> args, ref int startindex, ref string[] newargs,
+            ref bool keepemptyentries, ref List<ReferenceHub> __result) {
+            return !Enable ||
+                   !SelectorProcessor.TryProcessString(MinecraftSelectorsPlugin.CurrentSender, args, startindex,
+                       out __result,
+                       ref newargs);
+        }
+    }
+}
