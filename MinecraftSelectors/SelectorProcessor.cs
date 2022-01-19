@@ -122,7 +122,6 @@ namespace MinecraftSelectors {
         }
 
         private static Func<ReferenceHub, bool> GetFilter(string property, string value, bool invert) {
-            Log.Debug("property " + property + "|value " + value);
             if (string.IsNullOrEmpty(property))
                 return null;
             switch (Simplify(property)) {
@@ -131,10 +130,7 @@ namespace MinecraftSelectors {
                     if (value == null)
                         break;
                     if (int.TryParse(value, out var result))
-                        return hub => {
-                            var b = hub.queryProcessor.NetworkPlayerId == result;
-                            return invert ? !b : b;
-                        };
+                        return hub => hub.queryProcessor.NetworkPlayerId == result != invert;
                     break;
                 }
                 case "r":
@@ -145,16 +141,10 @@ namespace MinecraftSelectors {
                     RoleType r = GetRole(value);
                     if (r == RoleType.None)
                         break;
-                    return hub => {
-                        var b = hub.characterClassManager.CurRole.roleId == r;
-                        return invert ? !b : b;
-                    };
+                    return hub => hub.characterClassManager.CurRole.roleId == r != invert;
                 }
                 case "scp":
-                    return hub => {
-                        var b = hub.characterClassManager.CurRole.team == Team.SCP;
-                        return invert ? !b : b;
-                    };
+                    return hub => hub.characterClassManager.CurRole.team == Team.SCP != invert;
                 case "god":
                 case "godmode":
                     return hub => hub.characterClassManager.GodMode != invert;
@@ -165,10 +155,7 @@ namespace MinecraftSelectors {
                 case "team": {
                     if (value == null || !Enum.TryParse(value, true, out Team t))
                         break;
-                    return hub => {
-                        var b = hub.characterClassManager.CurRole.team == t;
-                        return invert ? !b : b;
-                    };
+                    return hub => hub.characterClassManager.CurRole.team == t != invert;
                 }
                 case "remoteadmin":
                 case "ra":
