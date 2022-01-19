@@ -160,6 +160,24 @@ namespace MinecraftSelectors {
                     return hub => hub.characterClassManager.GodMode != invert;
                 case "noclip":
                     return hub => hub.characterClassManager.NetworkNoclipEnabled != invert;
+                case "verified":
+                    return hub => hub.Ready != invert;
+                case "team": {
+                    if (value == null || !Enum.TryParse(value, true, out Team t))
+                        break;
+                    return hub => {
+                        var b = hub.characterClassManager.CurRole.team == t;
+                        return invert ? !b : b;
+                    };
+                }
+                case "remoteadmin":
+                case "ra":
+                    return hub => hub.serverRoles.RemoteAdmin != invert;
+                case "bypass":
+                    return hub => hub.serverRoles.BypassMode != invert;
+                case "dnt":
+                case "donottrack":
+                    return hub => hub.serverRoles.DoNotTrack != invert;
             }
 
             return null;
