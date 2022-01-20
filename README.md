@@ -21,12 +21,13 @@ This plugin adds the opportunity to use selectors like in Minecraft. Example: `@
 |--------------------------|---------|---------|----------------------------------------------------------------------|
 | is_enabled               | Boolean | True    | If the plugin should load and Minecraft selectors are to be enabled. |
 | allow_advanced_selectors | Boolean | True    | If advanced selectors should be allowed.                             |
+| include_host             | Boolean | False   | If the server host (a hidden player) can be selected.                |
 
 # Basics
 
 ### _To view help in-game, use the `mcs` command in RA or in the Server Console._
 
-Currently, **there are 3 basic selectors**. All players (**_a_**), random player (**_r_**)
+Currently, **there are 4 basic selectors**. All players (**_a_**), nearest player (**_p_**), random player (**_r_**)
 and self (**_s_**). "Self" is the executor of the command.
 
 To use the selectors instead of a player ID list, type '@' and the selector's character. **Example: `@a`**
@@ -51,6 +52,7 @@ Some two-sided selectors allow ranged values. The minimum and/or the maximum or 
 
 | Selector    | Aliases | Sides | Range Check Support     | Description                               | Example(s)                |
 |-------------|---------|-------|-------------------------|-------------------------------------------|---------------------------|
+| limit       | -       | 2     | No                      | Limits the selected player count          | `@r[limit=2]`
 | playerid    | id      | 2     | Yes                     | If the player's ID in RA equals the value | `@a[id=2..]`, `@r[id!=1]` |
 | class       | role, r | 2     | Yes; see values section | If the player is playing as that class    | `@a[r=classd]`, `@a[r=2]` |
 | scp         | -       | 1     | No                      | If the player is an SCP                   | `@r[scp]`                 |

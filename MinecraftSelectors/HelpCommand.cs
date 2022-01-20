@@ -12,7 +12,7 @@ namespace MinecraftSelectors {
             "In the info, Remote Admin is referenced as RA.";
 
         private const string Basics =
-            "There are 3 available selectors. All players (a), random player (r) and self (s). Self is the executor of the command.\n" +
+            "There are 4 available selectors. All players (a), closest player (p), random player (r) and self (s). Self is the executor of the command.\n" +
             "To use the selectors, type '@' and the selector's character. Example: @a\n" +
             "For advanced selectors, try \"mcs advanced\"";
 

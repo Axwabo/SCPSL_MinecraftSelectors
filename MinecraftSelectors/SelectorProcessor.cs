@@ -5,18 +5,18 @@ using System.Text.RegularExpressions;
 using CommandSystem;
 using Exiled.API.Features;
 using RemoteAdmin;
+using UnityEngine;
 using static MinecraftSelectors.MinecraftSelectorsPlugin;
 
 namespace MinecraftSelectors {
     public static class SelectorProcessor {
         private static readonly Regex Pattern = new Regex("[ -.'_]");
-        private static readonly List<char> Selectors = new List<char> {'a', 's', 'r'};
+        private static readonly List<char> Selectors = new List<char> {'a', 's', 'r', 'p'};
         private static readonly char[] Numbers = "0123456789".ToCharArray();
-        private static readonly Random R = new Random();
 
         public static bool TryProcessString(ICommandSender sender, ArraySegment<string> arguments, int startIndex,
-            out List<ReferenceHub> hubs, ref string[] newArguments) {
-            hubs = new List<ReferenceHub>(10);
+            out List<ReferenceHub> result, ref string[] newArguments, bool keepEmptyEntries = true) {
+            result = new List<ReferenceHub>(10);
             try {
                 var array = arguments.ToArray();
                 if (!(array.Length > startIndex))
@@ -24,11 +24,14 @@ namespace MinecraftSelectors {
                 var selector = array[startIndex];
                 if (!selector.StartsWith("@") || selector.Length < 2 || !selector[1].IsValidSelector())
                     return false;
+                IEnumerable<ReferenceHub> hubs = ReferenceHub.GetAllHubs().Values;
+                if (!Singleton.Config.IncludeHost)
+                    hubs = hubs.Where(hub => hub != ReferenceHub.HostHub && hub != ReferenceHub.LocalHub);
                 var index = startIndex + 1;
                 var advanced = string.Join(" ", array.Segment(startIndex)).SafeSubstring(2);
                 if (advanced.Length < 2 || !advanced.StartsWith("[")) {
-                    hubs = ExecuteSelector(sender, array[startIndex], ReferenceHub.GetAllHubs().Values);
-                    newArguments = array.Segment(index).ToArray();
+                    result = ExecuteSelector(sender, array[startIndex], hubs, -1, -1, 1);
+                    newArguments = array.Segment(index).Where(e => keepEmptyEntries && e.Length > 0).ToArray();
                     return true;
                 }
 
@@ -38,6 +41,9 @@ namespace MinecraftSelectors {
                 var propertyEnded = false;
                 var invert = false;
                 string property = null;
+                var minDist = -1f;
+                var maxDist = -1f;
+                var limit = -1;
                 var filters = new List<Func<ReferenceHub, bool>>();
                 for (var charIndex = 1; charIndex < chars.Length; charIndex++) {
                     var c = chars[charIndex];
@@ -57,6 +63,8 @@ namespace MinecraftSelectors {
                     }
 
                     if (c == '=') {
+                        if (!propertyEnded)
+                            property = advanced.Substring(propertyStart, charIndex - propertyStart);
                         propertyEnded = true;
                         valueStart = charIndex + 1;
                         continue;
@@ -68,7 +76,7 @@ namespace MinecraftSelectors {
                         propertyEnded = false;
                         filters.AddNonNull(GetFilter(property,
                             advanced.Substring(valueStart, charIndex - valueStart),
-                            invert));
+                            invert, ref limit, ref minDist, ref maxDist));
                         propertyStart = charIndex + 1;
                         property = null;
                         continue;
@@ -80,14 +88,16 @@ namespace MinecraftSelectors {
                         property = advanced.Substring(propertyStart, charIndex - propertyStart);
                     filters.AddNonNull(GetFilter(property,
                         advanced.Substring(valueStart, charIndex - valueStart),
-                        invert));
+                        invert, ref limit, ref minDist, ref maxDist));
                     break;
                 }
 
-                newArguments = array.Length > index ? array.Segment(index).ToArray() : new string[] { };
-                hubs = ExecuteSelector(sender, selector,
-                    ReferenceHub.GetAllHubs().Values.Where(h =>
-                        !Singleton.Config.AdvancedSelectorsAllowed || filters.All(f => f(h))));
+                newArguments = array.Length > index
+                    ? array.Segment(index).Where(e => keepEmptyEntries && e.Length > 0).ToArray()
+                    : new string[] { };
+                result = ExecuteSelector(sender, selector,
+                    hubs.Where(h =>
+                        !Singleton.Config.AdvancedSelectorsAllowed || filters.All(f => f(h))), limit, minDist, maxDist);
                 return true;
             } catch (Exception e) {
                 Log.Error(e);
@@ -97,28 +107,54 @@ namespace MinecraftSelectors {
 
         private static List<ReferenceHub> ExecuteSelector(
             ICommandSender sender, string arg,
-            IEnumerable<ReferenceHub> hubs) {
+            IEnumerable<ReferenceHub> hubs, int limit, float minDist, float maxDist) {
+            if (limit == 0)
+                return new List<ReferenceHub>(0);
             if (arg.Length < 1)
                 return hubs.ToList();
-            var method = arg[1];
+            var method = arg.ToLower()[1];
             var list = hubs.ToList();
+            limit = limit < 0 ? list.Count : limit;
             switch (method) {
                 case 'r':
-                    return new List<ReferenceHub>(1) {list[R.Next(list.Count)]};
-                case 's':
+                    if (limit < 0)
+                        return new List<ReferenceHub>(1) {list.RandomItem()};
+                    var l = new List<ReferenceHub>(limit);
+                    for (var i = 0; i < limit; i++) {
+                        if (list.Count < 1)
+                            break;
+                        var item = list.RandomItem();
+                        l.Add(item);
+                        list.Remove(item);
+                    }
+
+                    return l;
+                case 's': {
                     if (sender is PlayerCommandSender p)
                         return new List<ReferenceHub>(1) {p.ReferenceHub};
                     break;
+                }
+                case 'p': {
+                    if (sender is PlayerCommandSender p) {
+                        var pos = p.ReferenceHub.transform.position;
+                        return list.Where(h => maxDist < 0 || Vector3.Distance(pos, h.transform.position)
+                                .CheckRange(minDist, maxDist, minDist >= 0, maxDist >= 0))
+                            .OrderBy(hub => Vector3.Distance(pos, hub.transform.position)).Take(limit).ToList();
+                    }
+
+                    break;
+                }
             }
 
-            return list;
+            return list.Take(limit).ToList();
         }
 
         private static string Simplify(string s) {
             return Pattern.Replace(s.ToLower(), "");
         }
 
-        private static Func<ReferenceHub, bool> GetFilter(string property, string value, bool invert) {
+        private static Func<ReferenceHub, bool> GetFilter(string property, string value, bool invert, ref int limit,
+            ref float minDist, ref float maxDist) {
             if (string.IsNullOrEmpty(property))
                 return null;
             switch (Simplify(property)) {
@@ -181,6 +217,28 @@ namespace MinecraftSelectors {
                         hub.nicknameSync.MyNick.Equals(value, StringComparison.OrdinalIgnoreCase) != invert;
                 case "namehas":
                     return hub => hub.nicknameSync.MyNick.Contains(value, StringComparison.OrdinalIgnoreCase) != invert;
+                case "distance":
+                case "dist": {
+                    if (value == null)
+                        break;
+                    if (TryParseRange(value, out float min, out var max, out _, out _)) {
+                        minDist = min;
+                        maxDist = max;
+                        break;
+                    }
+
+                    if (float.TryParse(value, out var x))
+                        minDist = maxDist = x;
+
+                    break;
+                }
+                case "limit": {
+                    if (value == null)
+                        break;
+                    if (int.TryParse(value, out var x))
+                        limit = x;
+                    break;
+                }
             }
 
             return null;
@@ -231,6 +289,16 @@ namespace MinecraftSelectors {
         }
 
         public static bool CheckRange(this byte x, byte min, byte max, bool minSet, bool maxSet) {
+            if (!minSet && !maxSet)
+                return false;
+            if (!minSet)
+                return x <= max;
+            if (!maxSet)
+                return x >= min;
+            return x >= min && x <= max;
+        }
+
+        public static bool CheckRange(this float x, float min, float max, bool minSet, bool maxSet) {
             if (!minSet && !maxSet)
                 return false;
             if (!minSet)
@@ -302,6 +370,29 @@ namespace MinecraftSelectors {
                     value.SafeSubstring(value.IndexOf("..", StringComparison.Ordinal))
                         .Filter(c => Numbers.Contains(c)), out min);
                 maxSet = byte.TryParse(
+                    value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)
+                        .Filter(c => Numbers.Contains(c)), out max);
+            }
+
+            return minSet || maxSet;
+        }
+
+        public static bool TryParseRange(string value, out float min, out float max, out bool minSet, out bool maxSet) {
+            min = 0;
+            max = 0;
+            minSet = false;
+            maxSet = false;
+            if (string.IsNullOrEmpty(value))
+                return false;
+            if (value.EndsWith(".."))
+                minSet = float.TryParse(value.Filter(c => Numbers.Contains(c)), out min);
+            else if (value.StartsWith(".."))
+                maxSet = float.TryParse(value.Filter(c => Numbers.Contains(c)), out max);
+            else {
+                minSet = float.TryParse(
+                    value.SafeSubstring(value.IndexOf("..", StringComparison.Ordinal))
+                        .Filter(c => Numbers.Contains(c)), out min);
+                maxSet = float.TryParse(
                     value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)
                         .Filter(c => Numbers.Contains(c)), out max);
             }
