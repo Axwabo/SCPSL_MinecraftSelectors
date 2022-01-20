@@ -12,7 +12,7 @@ namespace MinecraftSelectors {
     public static class SelectorProcessor {
         private static readonly Regex Pattern = new Regex("[ -.'_]");
         private static readonly List<char> Selectors = new List<char>(4) {'a', 's', 'r', 'p'};
-        private static readonly char[] Numbers = "0123456789".ToCharArray();
+        private static readonly Regex Numbers = new Regex("-?\\d+\\.?\\d*");
 
         public static bool TryProcessString(ICommandSender sender, ArraySegment<string> arguments, int startIndex,
             out List<ReferenceHub> result, ref string[] newArguments, bool keepEmptyEntries = true) {
@@ -31,7 +31,7 @@ namespace MinecraftSelectors {
                 var advanced = string.Join(" ", array.Segment(startIndex)).SafeSubstring(2);
                 if (advanced.Length < 2 || !advanced.StartsWith("[")) {
                     result = ExecuteSelector(sender, array[startIndex], hubs, -1, -1, 1);
-                    newArguments = array.Segment(index).Where(e => keepEmptyEntries && e.Length > 0).ToArray();
+                    newArguments = array.Segment(index).Where(e => keepEmptyEntries || e.Length > 0).ToArray();
                     return true;
                 }
 
@@ -93,7 +93,7 @@ namespace MinecraftSelectors {
                 }
 
                 newArguments = array.Length > index
-                    ? array.Segment(index).Where(e => keepEmptyEntries && e.Length > 0).ToArray()
+                    ? array.Segment(index).Where(e => keepEmptyEntries || e.Length > 0).ToArray()
                     : new string[] { };
                 result = ExecuteSelector(sender, selector,
                     hubs.Where(h =>
@@ -316,16 +316,16 @@ namespace MinecraftSelectors {
             if (string.IsNullOrEmpty(value))
                 return false;
             if (value.EndsWith(".."))
-                minSet = int.TryParse(value.Filter(c => Numbers.Contains(c)), out min);
+                minSet = int.TryParse(Numbers.Match(value).Value, out min);
             else if (value.StartsWith(".."))
-                maxSet = int.TryParse(value.Filter(c => Numbers.Contains(c)), out max);
+                maxSet = int.TryParse(Numbers.Match(value).Value, out max);
             else {
                 minSet = int.TryParse(
-                    value.SafeSubstring(value.IndexOf("..", StringComparison.Ordinal))
-                        .Filter(c => Numbers.Contains(c)), out min);
+                    Numbers.Match(value.SafeSubstring(0, value.IndexOf("..", StringComparison.Ordinal))).Value,
+                    out min);
                 maxSet = int.TryParse(
-                    value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)
-                        .Filter(c => Numbers.Contains(c)), out max);
+                    Numbers.Match(value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)).Value,
+                    out max);
             }
 
             return minSet || maxSet;
@@ -339,16 +339,16 @@ namespace MinecraftSelectors {
             if (string.IsNullOrEmpty(value))
                 return false;
             if (value.EndsWith(".."))
-                minSet = sbyte.TryParse(value.Filter(c => Numbers.Contains(c)), out min);
+                minSet = sbyte.TryParse(Numbers.Match(value).Value, out min);
             else if (value.StartsWith(".."))
-                maxSet = sbyte.TryParse(value.Filter(c => Numbers.Contains(c)), out max);
+                maxSet = sbyte.TryParse(Numbers.Match(value).Value, out max);
             else {
                 minSet = sbyte.TryParse(
-                    value.SafeSubstring(value.IndexOf("..", StringComparison.Ordinal))
-                        .Filter(c => Numbers.Contains(c)), out min);
+                    Numbers.Match(value.SafeSubstring(0, value.IndexOf("..", StringComparison.Ordinal))).Value,
+                    out min);
                 maxSet = sbyte.TryParse(
-                    value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)
-                        .Filter(c => Numbers.Contains(c)), out max);
+                    Numbers.Match(value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)).Value,
+                    out max);
             }
 
             return minSet || maxSet;
@@ -362,16 +362,16 @@ namespace MinecraftSelectors {
             if (string.IsNullOrEmpty(value))
                 return false;
             if (value.EndsWith(".."))
-                minSet = byte.TryParse(value.Filter(c => Numbers.Contains(c)), out min);
+                minSet = byte.TryParse(Numbers.Match(value).Value, out min);
             else if (value.StartsWith(".."))
-                maxSet = byte.TryParse(value.Filter(c => Numbers.Contains(c)), out max);
+                maxSet = byte.TryParse(Numbers.Match(value).Value, out max);
             else {
                 minSet = byte.TryParse(
-                    value.SafeSubstring(value.IndexOf("..", StringComparison.Ordinal))
-                        .Filter(c => Numbers.Contains(c)), out min);
+                    Numbers.Match(value.SafeSubstring(0, value.IndexOf("..", StringComparison.Ordinal))).Value,
+                    out min);
                 maxSet = byte.TryParse(
-                    value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)
-                        .Filter(c => Numbers.Contains(c)), out max);
+                    Numbers.Match(value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)).Value,
+                    out max);
             }
 
             return minSet || maxSet;
@@ -385,16 +385,16 @@ namespace MinecraftSelectors {
             if (string.IsNullOrEmpty(value))
                 return false;
             if (value.EndsWith(".."))
-                minSet = float.TryParse(value.Filter(c => Numbers.Contains(c)), out min);
+                minSet = float.TryParse(Numbers.Match(value).Value, out min);
             else if (value.StartsWith(".."))
-                maxSet = float.TryParse(value.Filter(c => Numbers.Contains(c)), out max);
+                maxSet = float.TryParse(Numbers.Match(value).Value, out max);
             else {
                 minSet = float.TryParse(
-                    value.SafeSubstring(value.IndexOf("..", StringComparison.Ordinal))
-                        .Filter(c => Numbers.Contains(c)), out min);
+                    Numbers.Match(value.SafeSubstring(0, value.IndexOf("..", StringComparison.Ordinal))).Value,
+                    out min);
                 maxSet = float.TryParse(
-                    value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)
-                        .Filter(c => Numbers.Contains(c)), out max);
+                    Numbers.Match(value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)).Value,
+                    out max);
             }
 
             return minSet || maxSet;
