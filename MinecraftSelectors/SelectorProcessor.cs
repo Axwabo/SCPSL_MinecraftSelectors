@@ -11,7 +11,7 @@ using static MinecraftSelectors.MinecraftSelectorsPlugin;
 namespace MinecraftSelectors {
     public static class SelectorProcessor {
         private static readonly Regex Pattern = new Regex("[ -.'_]");
-        private static readonly List<char> Selectors = new List<char> {'a', 's', 'r', 'p'};
+        private static readonly List<char> Selectors = new List<char>(4) {'a', 's', 'r', 'p'};
         private static readonly char[] Numbers = "0123456789".ToCharArray();
 
         public static bool TryProcessString(ICommandSender sender, ArraySegment<string> arguments, int startIndex,

@@ -36,9 +36,11 @@ namespace MinecraftSelectors {
             "'team': the team of the player. Use \"mcs values\" to list the teams. Example: @r[team=SCP]\n" +
             "'remoteadmin' or 'ra': if the player is logged into RA. Example: @a[!ra]\n" +
             "'bypass': if the player has bypass mode (open everything with hand) enabled. Example: @r[!bypass]\n" +
-            "'dnt' or 'donottrack': if the player has DNT (forbids the server to use User ID for purposes not related to security) enabled. Example: @a[dnt]\n" +
+            "'dnt' or 'donottrack': if the player has DNT (forbids the server to use Steam ID and IP for purposes not related to server security) enabled. Example: @a[dnt]\n" +
             "'name': if the player's name is equal to the value (case insensitive). Example: @a[name=Axwabo]\n" +
-            "'namehas': if the player's name includes the sequence (case insensitive). Example: @a[namehas=fire]";
+            "'namehas': if the player's name includes the sequence (case insensitive). Example: @a[namehas=fire]\n" +
+            "'limit': max amount of players to be selected. Example: @r[limit=2]\n" +
+            "'dist' or 'distance': distance from the executor of the command. Example: @a[dist=..5]";
 
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response) {
@@ -60,7 +62,7 @@ namespace MinecraftSelectors {
                     case "values":
                         response = $"Roles: {GetEnums(typeof(RoleType))}\n" +
                                    "Teams: SCP, MTF, CHI, RSC, CDP, RIP, TUT\n" +
-                                   "CHI = Chaos Insurgency, RSC = Scientists, CDP = Class-D's, RIP = Spectators, TUT = Tutorial class.\n" +
+                                   "CHI = Chaos Insurgency, RSC = Scientists, CDP = Class-D's, RIP = Spectators, TUT = Tutorial Class.\n" +
                                    "In roles, SCP-173 is number 0, and each one after it increases by one (Class-D = 1, Spectator = 2).";
                         return true;
                 }

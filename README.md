@@ -50,21 +50,22 @@ Some two-sided selectors allow ranged values. The minimum and/or the maximum or 
 
 # List of Advanced Selectors
 
-| Selector    | Aliases | Sides | Range Check Support     | Description                               | Example(s)                |
-|-------------|---------|-------|-------------------------|-------------------------------------------|---------------------------|
-| limit       | -       | 2     | No                      | Limits the selected player count          | `@r[limit=2]`
-| playerid    | id      | 2     | Yes                     | If the player's ID in RA equals the value | `@a[id=2..]`, `@r[id!=1]` |
-| class       | role, r | 2     | Yes; see values section | If the player is playing as that class    | `@a[r=classd]`, `@a[r=2]` |
-| scp         | -       | 1     | No                      | If the player is an SCP                   | `@r[scp]`                 |
-| godmode     | god     | 1     | No                      | If the player has godmode on              | `@r[!god]`                |
-| noclip      | -       | 1     | No                      | If the player has noclip on               | `@a[noclip]`              |
-| verified    | -       | 1     | No                      | If the player's Steam account is verified | `@a[verified]`            |
-| team        | -       | 2     | Yes; see values section | If the player's team equals the value     | `@r[team=cdp]`            |
-| remoteadmin | ra      | 1     | No                      | If the player is logged into RA           | `@a[!ra]`                 |
-| bypass      | -       | 1     | No                      | If the player has bypass mode on          | `@r[!bypass]`             |
-| donottrack  | dnt     | 1     | No; see values section  | If the player has DNT enabled             | `@a[dnt]`                 |
-| name        | -       | 2     | No; case insensitive    | If the player's name equals the value     | `@a[name=Player]`         |
-| namehas     | -       | 2     | No; case insensitive    | If the player's name contains the value   | `@a[namehas=a]`           |
+| Selector    | Aliases | Sides | Range Check Support     | Description                                             | Example(s)                |
+|-------------|---------|-------|-------------------------|---------------------------------------------------------|---------------------------|
+| limit       | -       | 2     | No                      | Limits the selected player count                        | `@r[limit=2]`             |
+| distance    | dist    | 2     | Yes                     | If the player's distance to the sender equals the value | `@a[dist=..3]`            |
+| playerid    | id      | 2     | Yes                     | If the player's ID in RA equals the value               | `@a[id=2..]`, `@r[id!=1]` |
+| class       | role, r | 2     | Yes; see values section | If the player is playing as that class                  | `@a[r=classd]`, `@a[r=2]` |
+| scp         | -       | 1     | No                      | If the player is an SCP                                 | `@r[scp]`                 |
+| godmode     | god     | 1     | No                      | If the player has godmode on                            | `@r[!god]`                |
+| noclip      | -       | 1     | No                      | If the player has noclip on                             | `@a[noclip]`              |
+| verified    | -       | 1     | No                      | If the player's Steam account is verified               | `@a[verified]`            |
+| team        | -       | 2     | Yes; see values section | If the player's team equals the value                   | `@r[team=cdp]`            |
+| remoteadmin | ra      | 1     | No                      | If the player is logged into RA                         | `@a[!ra]`                 |
+| bypass      | -       | 1     | No                      | If the player has bypass mode on                        | `@r[!bypass]`             |
+| donottrack  | dnt     | 1     | No; see values section  | If the player has DNT enabled                           | `@a[dnt]`                 |
+| name        | -       | 2     | No; case insensitive    | If the player's name equals the value                   | `@a[name=Player]`         |
+| namehas     | -       | 2     | No; case insensitive    | If the player's name contains the value                 | `@a[namehas=a]`           |
 
 # Values
 
