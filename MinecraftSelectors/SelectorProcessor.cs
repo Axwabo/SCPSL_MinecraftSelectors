@@ -11,6 +11,7 @@ namespace MinecraftSelectors {
     public static class SelectorProcessor {
         private static readonly Regex Pattern = new Regex(" ");
         private static readonly List<char> Selectors = new List<char> {'a', 's', 'r'};
+        private static readonly char[] Numbers = "0123456789".ToCharArray();
 
         public static bool TryProcessString(ICommandSender sender, ArraySegment<string> arguments, int startIndex,
             out List<ReferenceHub> hubs, ref string[] newArguments) {
@@ -22,11 +23,10 @@ namespace MinecraftSelectors {
                 var selector = array[startIndex];
                 if (!selector.StartsWith("@") || selector.Length < 2 || !selector[1].IsValidSelector())
                     return false;
-                var list = ExecuteSelector(sender, array[startIndex], ReferenceHub.GetAllHubs().Values);
                 var index = startIndex + 1;
                 var advanced = string.Join(" ", array.Segment(startIndex)).SafeSubstring(2);
                 if (advanced.Length < 2 || !advanced.StartsWith("[")) {
-                    hubs = list;
+                    hubs = ExecuteSelector(sender, array[startIndex], ReferenceHub.GetAllHubs().Values);
                     newArguments = array.Segment(index).ToArray();
                     return true;
                 }
@@ -84,7 +84,9 @@ namespace MinecraftSelectors {
                 }
 
                 newArguments = array.Length > index ? array.Segment(index).ToArray() : new string[] { };
-                hubs = list.Where(h => filters.All(f => f(h))).ToList();
+                hubs = ExecuteSelector(sender, selector,
+                    ReferenceHub.GetAllHubs().Values.Where(h =>
+                        !Singleton.Config.AdvancedSelectorsAllowed || filters.All(f => f(h))));
                 return true;
             } catch (Exception e) {
                 Log.Error(e);
@@ -98,23 +100,17 @@ namespace MinecraftSelectors {
             if (arg.Length < 1)
                 return hubs.ToList();
             var method = arg[1];
-            var set = new List<ReferenceHub>();
+            var list = hubs.ToList();
             switch (method) {
                 case 'r':
-                    set.Add(hubs.Random());
-                    break;
+                    return new List<ReferenceHub>(1) {list.Random()};
                 case 's':
                     if (sender is PlayerCommandSender p)
-                        set.Add(p.ReferenceHub);
+                        return new List<ReferenceHub>(1) {p.ReferenceHub};
                     break;
-                case 'a':
-                    set.AddRange(hubs);
-                    break;
-                default:
-                    return hubs.ToList();
             }
 
-            return set;
+            return list;
         }
 
         private static string Simplify(string s) {
@@ -129,8 +125,12 @@ namespace MinecraftSelectors {
                 case "id": {
                     if (value == null)
                         break;
-                    if (int.TryParse(value, out var result))
-                        return hub => hub.queryProcessor.NetworkPlayerId == result != invert;
+                    var range = TryParseRange(value, out int min, out var max, out var minSet, out var maxSet);
+                    int.TryParse(value, out var result);
+                    return hub => {
+                        var id = hub.queryProcessor.NetworkPlayerId;
+                        return (id == result || range && id.CheckRange(min, max, minSet, maxSet)) != invert;
+                    };
                     break;
                 }
                 case "r":
@@ -138,10 +138,12 @@ namespace MinecraftSelectors {
                 case "class": {
                     if (value == null)
                         break;
-                    RoleType r = GetRole(value);
-                    if (r == RoleType.None)
-                        break;
-                    return hub => hub.characterClassManager.CurRole.roleId == r != invert;
+                    var range = TryParseRange(value, out sbyte min, out var max, out var minSet, out var maxSet);
+                    var r = GetRole(value);
+                    return hub => {
+                        var id = hub.characterClassManager.CurRole.roleId;
+                        return (id == r || range && ((sbyte) id).CheckRange(min, max, minSet, maxSet)) != invert;
+                    };
                 }
                 case "scp":
                     return hub => hub.characterClassManager.CurRole.team == Team.SCP != invert;
@@ -153,9 +155,18 @@ namespace MinecraftSelectors {
                 case "verified":
                     return hub => hub.Ready != invert;
                 case "team": {
-                    if (value == null || !Enum.TryParse(value, true, out Team t))
+                    if (value == null)
                         break;
-                    return hub => hub.characterClassManager.CurRole.team == t != invert;
+                    var e = Enum.TryParse(value, true, out Team team);
+                    var b = byte.TryParse(value, out var result);
+                    var r = TryParseRange(value, out byte min, out var max, out var minSet, out var maxSet);
+                    if (!(b || e || r))
+                        break;
+                    return hub => {
+                        var t = hub.characterClassManager.CurRole.team;
+                        return (e && t == team || b && (byte) t == result ||
+                                r && ((byte) t).CheckRange(min, max, minSet, maxSet)) != invert;
+                    };
                 }
                 case "remoteadmin":
                 case "ra":
@@ -165,6 +176,11 @@ namespace MinecraftSelectors {
                 case "dnt":
                 case "donottrack":
                     return hub => hub.serverRoles.DoNotTrack != invert;
+                case "name":
+                    return hub =>
+                        hub.nicknameSync.MyNick.Equals(value, StringComparison.OrdinalIgnoreCase) != invert;
+                case "namehas":
+                    return hub => hub.nicknameSync.MyNick.Contains(value, StringComparison.OrdinalIgnoreCase) != invert;
             }
 
             return null;
@@ -192,6 +208,113 @@ namespace MinecraftSelectors {
             return start < 0 || start > s.Length || length < 0 || start > s.Length - length || length == 0
                 ? ""
                 : s.Substring(start, length);
+        }
+
+        public static bool CheckRange(this int x, int min, int max, bool minSet, bool maxSet) {
+            if (!minSet && !maxSet)
+                return false;
+            if (!minSet)
+                return x <= max;
+            if (!maxSet)
+                return x >= min;
+            return x >= min && x <= max;
+        }
+
+        public static bool CheckRange(this sbyte x, sbyte min, sbyte max, bool minSet, bool maxSet) {
+            if (!minSet && !maxSet)
+                return false;
+            if (!minSet)
+                return x <= max;
+            if (!maxSet)
+                return x >= min;
+            return x >= min && x <= max;
+        }
+
+        public static bool CheckRange(this byte x, byte min, byte max, bool minSet, bool maxSet) {
+            if (!minSet && !maxSet)
+                return false;
+            if (!minSet)
+                return x <= max;
+            if (!maxSet)
+                return x >= min;
+            return x >= min && x <= max;
+        }
+
+        public static bool TryParseRange(string value, out int min, out int max, out bool minSet, out bool maxSet) {
+            min = 0;
+            max = 0;
+            minSet = false;
+            maxSet = false;
+            if (string.IsNullOrEmpty(value))
+                return false;
+            if (value.EndsWith(".."))
+                minSet = int.TryParse(value.Filter(c => Numbers.Contains(c)), out min);
+            else if (value.StartsWith(".."))
+                maxSet = int.TryParse(value.Filter(c => Numbers.Contains(c)), out max);
+            else {
+                minSet = int.TryParse(
+                    value.SafeSubstring(value.IndexOf("..", StringComparison.Ordinal))
+                        .Filter(c => Numbers.Contains(c)), out min);
+                maxSet = int.TryParse(
+                    value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)
+                        .Filter(c => Numbers.Contains(c)), out max);
+            }
+
+            return minSet || maxSet;
+        }
+
+        public static bool TryParseRange(string value, out sbyte min, out sbyte max, out bool minSet, out bool maxSet) {
+            min = 0;
+            max = 0;
+            minSet = false;
+            maxSet = false;
+            if (string.IsNullOrEmpty(value))
+                return false;
+            if (value.EndsWith(".."))
+                minSet = sbyte.TryParse(value.Filter(c => Numbers.Contains(c)), out min);
+            else if (value.StartsWith(".."))
+                maxSet = sbyte.TryParse(value.Filter(c => Numbers.Contains(c)), out max);
+            else {
+                minSet = sbyte.TryParse(
+                    value.SafeSubstring(value.IndexOf("..", StringComparison.Ordinal))
+                        .Filter(c => Numbers.Contains(c)), out min);
+                maxSet = sbyte.TryParse(
+                    value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)
+                        .Filter(c => Numbers.Contains(c)), out max);
+            }
+
+            return minSet || maxSet;
+        }
+
+        public static bool TryParseRange(string value, out byte min, out byte max, out bool minSet, out bool maxSet) {
+            min = 0;
+            max = 0;
+            minSet = false;
+            maxSet = false;
+            if (string.IsNullOrEmpty(value))
+                return false;
+            if (value.EndsWith(".."))
+                minSet = byte.TryParse(value.Filter(c => Numbers.Contains(c)), out min);
+            else if (value.StartsWith(".."))
+                maxSet = byte.TryParse(value.Filter(c => Numbers.Contains(c)), out max);
+            else {
+                minSet = byte.TryParse(
+                    value.SafeSubstring(value.IndexOf("..", StringComparison.Ordinal))
+                        .Filter(c => Numbers.Contains(c)), out min);
+                maxSet = byte.TryParse(
+                    value.SafeSubstring(value.LastIndexOf("..", StringComparison.Ordinal) + 2)
+                        .Filter(c => Numbers.Contains(c)), out max);
+            }
+
+            return minSet || maxSet;
+        }
+
+        public static string Filter(this string s, Func<char, bool> filter) {
+            return string.Join("", s.ToCharArray().Where(filter));
+        }
+
+        public static bool Contains(this string s, string contain, StringComparison comparison) {
+            return s.IndexOf(contain, comparison) >= 0;
         }
     }
 }
