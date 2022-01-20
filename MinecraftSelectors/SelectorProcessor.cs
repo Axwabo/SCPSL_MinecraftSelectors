@@ -9,9 +9,10 @@ using static MinecraftSelectors.MinecraftSelectorsPlugin;
 
 namespace MinecraftSelectors {
     public static class SelectorProcessor {
-        private static readonly Regex Pattern = new Regex(" ");
+        private static readonly Regex Pattern = new Regex("[ -.'_]");
         private static readonly List<char> Selectors = new List<char> {'a', 's', 'r'};
         private static readonly char[] Numbers = "0123456789".ToCharArray();
+        private static readonly Random R = new Random();
 
         public static bool TryProcessString(ICommandSender sender, ArraySegment<string> arguments, int startIndex,
             out List<ReferenceHub> hubs, ref string[] newArguments) {
@@ -103,7 +104,7 @@ namespace MinecraftSelectors {
             var list = hubs.ToList();
             switch (method) {
                 case 'r':
-                    return new List<ReferenceHub>(1) {list.Random()};
+                    return new List<ReferenceHub>(1) {list[R.Next(list.Count)]};
                 case 's':
                     if (sender is PlayerCommandSender p)
                         return new List<ReferenceHub>(1) {p.ReferenceHub};
@@ -131,7 +132,6 @@ namespace MinecraftSelectors {
                         var id = hub.queryProcessor.NetworkPlayerId;
                         return (id == result || range && id.CheckRange(min, max, minSet, maxSet)) != invert;
                     };
-                    break;
                 }
                 case "r":
                 case "role":
