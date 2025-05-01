@@ -1,5 +1,9 @@
 ﻿# MinecraftSelectors
 
+> [!IMPORTANT]
+> This plugin is out of support and is made for an old version of EXILED.
+> Install [Axwabo.CommandSystem](https://github.com/Axwabo/CommandSystem) to use similar functionality.
+
 Adds Minecraft-like player selectors to SCP:SL to use with commands.
 
 Most commands in RA (Remote Admin) are executed on players. The vanilla commands use a built-in method to parse the
